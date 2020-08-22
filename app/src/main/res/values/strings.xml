@@ -3,4 +3,7 @@
     <string name="mads_calculator">Mads Calculator</string>
     <string name="view_history">View History</string>
     <string name="calculate">Calculate</string>
+    <string name="login">Login</string>
+    <string name="email">Email Address</string>
+    <string name="password">Password</string>
 </resources>

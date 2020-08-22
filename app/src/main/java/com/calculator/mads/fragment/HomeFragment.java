@@ -8,172 +8,204 @@ import android.view.ViewGroup;
 
 import androidx.fragment.app.Fragment;
 
+import com.calculator.mads.App;
 import com.calculator.mads.databinding.FragmentHomeBinding;
+import com.calculator.mads.model.CalculationHistory;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
+import java.util.HashMap;
 import java.util.Stack;
 
 public class HomeFragment extends Fragment {
 
     private FragmentHomeBinding fragmentHomeBinding;
-    private boolean isPressedOnce = false;
+    private char[] calculationOperations = {'*', '+', '/', '-'};
+    private int[] operatorsRank = {1, 2, 3, 4};  // 1 is highest and 4 is lowest
+    private boolean clearCalculation = false;
+    private DatabaseReference mDatabase;
 
     @SuppressLint("SetTextI18n")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         fragmentHomeBinding = FragmentHomeBinding.inflate(inflater);
-
+        mDatabase = FirebaseDatabase.getInstance().getReference("calculations");
 
         fragmentHomeBinding.button1.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "1");
+            setCalculationBox("1");
         });
 
         fragmentHomeBinding.button2.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "2");
+            setCalculationBox("2");
         });
 
         fragmentHomeBinding.button3.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "3");
+            setCalculationBox("3");
         });
 
         fragmentHomeBinding.button4.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "4");
+            setCalculationBox("4");
         });
 
         fragmentHomeBinding.button5.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "5");
+            setCalculationBox("5");
         });
 
         fragmentHomeBinding.button6.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "6");
+            setCalculationBox("6");
         });
 
         fragmentHomeBinding.button7.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "7");
+            setCalculationBox("7");
         });
 
         fragmentHomeBinding.button8.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "8");
+            setCalculationBox("8");
         });
 
         fragmentHomeBinding.button9.setOnClickListener(v -> {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "9");
+            setCalculationBox("9");
         });
 
-        fragmentHomeBinding.button0.setOnClickListener(v ->
-        {
-            isPressedOnce = false;
-            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + "0");
+        fragmentHomeBinding.button0.setOnClickListener(v -> {
+            setCalculationBox("0");
         });
 
         fragmentHomeBinding.buttonadd.setOnClickListener(v -> {
-            if (!isPressedOnce) {
-                fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + " + ");
-            }
-            isPressedOnce = true;
-
+            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + " + ");
         });
 
         fragmentHomeBinding.buttonsub.setOnClickListener(v -> {
-            if (!isPressedOnce) {
-                fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + " - ");
-            }
-            isPressedOnce = true;
+            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + " - ");
         });
 
         fragmentHomeBinding.buttonmul.setOnClickListener(v -> {
-            if (!isPressedOnce) {
-                fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + " * ");
-            }
-            isPressedOnce = true;
+            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + " * ");
         });
 
         fragmentHomeBinding.buttondiv.setOnClickListener(v -> {
-            if (!isPressedOnce) {
-                fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + " / ");
-            }
-            isPressedOnce = true;
+            fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + " / ");
         });
-
 
         fragmentHomeBinding.buttoneql.setOnClickListener(v -> {
-            String exp = fragmentHomeBinding.etDisplay.getText().toString();
-            int i = 0;
-            i = exp.indexOf('%');
-            if (i != -1) {
-                float n1 = Float.parseFloat(exp.substring(0, i - 1));
-                float n2 = Float.parseFloat(exp.substring(i + 2));
-                float res = (n1 / 100) * n2;
-                fragmentHomeBinding.etDisplay.setText(res + "");
+            clearCalculation = true;
+            String expression = fragmentHomeBinding.etDisplay.getText().toString();
+            if (evaluate(expression) != -0) {
+                fragmentHomeBinding.etDisplay.setText(evaluate(expression) + "");
+                HashMap<String, String> values = new HashMap<>();
+                values.put("expression", expression);
+                values.put("answer", fragmentHomeBinding.etDisplay.getText().toString());
+
+                String userId = mDatabase.push().getKey();
+                // pushing value to db
+                CalculationHistory calculationHistory = new CalculationHistory(
+                        values.get("expression"), values.get("answer"));
+                mDatabase.child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                        .child(userId)
+                        .setValue(calculationHistory);
+
+                //  saveInHistory(expression, fragmentHomeBinding.etDisplay.getText().toString());
             } else {
-                if (evaluate(exp) != -1)
-                    fragmentHomeBinding.etDisplay.setText(evaluate(exp) + "");
-                else fragmentHomeBinding.etDisplay.setText("invalid");
+                fragmentHomeBinding.etDisplay.setText("invalid");
             }
         });
 
-        fragmentHomeBinding.buttonDel.setOnClickListener(v -> fragmentHomeBinding.etDisplay.setText(""));
+        fragmentHomeBinding.buttonDel.setOnClickListener(v -> {
+            String s1 = fragmentHomeBinding.etDisplay.getText().toString();
+            if (s1.length() > 0)
+                fragmentHomeBinding.etDisplay.setText(s1.substring(0, s1.length() - 1));
+        });
+
+        fragmentHomeBinding.btnClear.setOnClickListener(view -> fragmentHomeBinding.etDisplay.setText(""));
 
         return fragmentHomeBinding.getRoot();
     }
 
-    char[] operations = {'*', '/', '+', '-'};
-    int[] precedence = {0, 0, 1, 1, 2, 2, 3, 3};
+    private void setCalculationBox(String value) {
+        if (clearCalculation) {
+            fragmentHomeBinding.etDisplay.setText("");
+            this.clearCalculation = false;
+        }
+        fragmentHomeBinding.etDisplay.setText(fragmentHomeBinding.etDisplay.getText() + value);
+    }
 
-    private float evaluate(String exp) {
+    private void saveInHistory(String expression, String answer) {
+        HashMap<String, String> values = new HashMap<>();
+        values.put("expression", expression);
+        values.put("answer", answer);
+
+        App.calculationsList.add(values);
+    }
+
+    private float evaluate(String expression) {
         try {
-            char[] tokens = exp.toCharArray();
-            Stack<Float> values = new Stack<>();
-            Stack<Character> ops = new Stack<>();
+            char[] tokens = expression.toCharArray();
+            Stack<Float> numberValues = new Stack<>();
+            Stack<Character> operationValues = new Stack<>();
 
             for (int i = 0; i < tokens.length; i++) {
-                if (tokens[i] == ' ')
+                // is space is found skip to next index
+                if (tokens[i] == ' ') {
                     continue;
+                }
 
-                if (!isOperator(tokens[i])) {
+                if (!checkIsOperator(tokens[i])) {
                     StringBuilder s = new StringBuilder();
-                    while (i < tokens.length && tokens[i] != ' ' && !isOperator(tokens[i]))
+                    while (i < tokens.length && tokens[i] != ' ' && !checkIsOperator(tokens[i])) {
                         s.append(tokens[i++]);
-                    values.push(Float.parseFloat(s.toString()));
-                } else if (isOperator(tokens[i])) {
-                    while (!ops.empty() && hasPrecedence(tokens[i], ops.peek()))
-                        values.push(applyOp(ops.pop(), values.pop(), values.pop()));
-                    ops.push(tokens[i]);
+                    }
+                    numberValues.push(Float.parseFloat(s.toString()));
+                } else if (checkIsOperator(tokens[i])) {
+                    // if its operator list has one value then check the ranking
+                    while (!operationValues.empty() && hasPrecedence(tokens[i], operationValues.peek())) {
+                        // if the precedence value is greater than the next operator values is popped and
+                        // calculation is performed.
+                        numberValues.push(calculate(operationValues.pop(), numberValues.pop(), numberValues.pop()));
+                    }
+                    operationValues.push(tokens[i]);
                 }
             }
-            while (!ops.empty())
-                values.push(applyOp(ops.pop(), values.pop(), values.pop()));
-
-            return values.pop();
+            while (!operationValues.empty()) {
+                numberValues.push(calculate(operationValues.pop(), numberValues.pop(), numberValues.pop()));
+            }
+            return numberValues.pop();
         } catch (Exception ee) {
-            return -1;
+            return -0;
         }
     }
 
-    public boolean isOperator(char t) {
-        int i;
-        for (i = 0; i < operations.length; i++) {
-            if (t == operations[i])
+    private boolean checkIsOperator(char operator) {
+        for (int i = 0; i < calculationOperations.length; i++) {
+            if (operator == calculationOperations[i]) {
+                // if operator matches the list item return true.
                 return true;
+            }
         }
         return false;
     }
 
-    public boolean hasPrecedence(char op1, char op2) {
-        int op1p = getPrecedence(op1);
-        int op2p = getPrecedence(op2);
-        return op2p <= op1p;
+    private boolean hasPrecedence(char operator1, char operator2) {
+        //check the ranking of the operators
+        int op1p = getPrecedence(operator1);
+        int op2p = getPrecedence(operator2);
+        if (op2p > op1p){
+            return false;
+        }
+        return true;
+        //return op2p <= op1p;
     }
 
-    public float applyOp(char op, float b, float a) {
+    public int getPrecedence(char c) {
+        int i;
+        for (i = 0; i < calculationOperations.length; i++) {
+            if (c == calculationOperations[i])
+                break;
+        }
+        return operatorsRank[i];
+    }
+
+    public float calculate(char op, float b, float a) {
         switch (op) {
             case '+':
                 return a + b;
@@ -183,19 +215,7 @@ public class HomeFragment extends Fragment {
                 return a * b;
             case '/':
                 return a / b;
-            case '^':
-                return (float) Math.pow(a, b);
         }
         return 0;
     }
-
-    public int getPrecedence(char c) {
-        int i;
-        for (i = 0; i < operations.length; i++) {
-            if (c == operations[i])
-                break;
-        }
-        return precedence[i];
-    }
-
 }
